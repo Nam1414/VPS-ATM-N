@@ -1,0 +1,8 @@
+{
+  "name": "Remix 2HAND.VN - Sàn Đồ Cũ Thể Thao \u0026 Đồ Điện Tử Tuyển Chọn",
+  "description": "Sàn giao dịch đồ cũ điện tử \u0026 thể thao 2hand tuyển chọn với tone màu pastel hồng và pastel xanh chủ đạo, kiểm định ngoại quan trung thực và hỗ trợ đồng kiểm 48h.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
