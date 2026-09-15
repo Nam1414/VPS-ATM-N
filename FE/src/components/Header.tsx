@@ -11,6 +11,7 @@ import {
   LogOut,
   ChevronDown,
   UserCheck,
+  ShieldCheck,
 } from 'lucide-react';
 import { CategoryTab, UserProfile } from '../types';
 
@@ -23,6 +24,7 @@ interface HeaderProps {
   onOpenCart: () => void;
   onOpenSell: () => void;
   onOpenProfile: () => void;
+  onOpenAdmin: () => void;
   onOpenAuth: (mode?: 'login' | 'register') => void;
   isLoggedIn: boolean;
   currentUser?: UserProfile | null;
@@ -38,6 +40,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenCart,
   onOpenSell,
   onOpenProfile,
+  onOpenAdmin,
   onOpenAuth,
   isLoggedIn,
   currentUser,
@@ -209,6 +212,18 @@ export const Header: React.FC<HeaderProps> = ({
                     >
                       <UserCheck className="w-4 h-4 text-sky-500" />
                       <span>Hồ sơ cá nhân</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        onOpenAdmin();
+                      }}
+                      className="w-full px-4 py-2.5 text-left font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                    >
+                      <ShieldCheck className="w-4 h-4 text-sky-500" />
+                      <span>Quản trị người dùng</span>
                     </button>
 
                     <button

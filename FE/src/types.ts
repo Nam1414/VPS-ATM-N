@@ -1,4 +1,4 @@
-export type ScreenType = 'home' | 'catalog' | 'detail' | 'sell' | 'profile' | 'auth';
+export type ScreenType = 'home' | 'catalog' | 'detail' | 'sell' | 'profile' | 'admin' | 'auth';
 
 export type CategoryTab = 'all' | 'electronics' | 'sports';
 

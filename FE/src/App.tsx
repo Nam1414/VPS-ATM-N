@@ -10,6 +10,7 @@ import { ProductDetailView } from './views/ProductDetailView';
 import { CreateListingView } from './views/CreateListingView';
 import { ProfileView } from './views/ProfileView.tsx';
 import { AuthView } from './views/AuthView';
+import { AdminView } from './views/AdminView';
 import { CheckCircle2, ShieldCheck } from 'lucide-react';
 
 export default function App() {
@@ -207,6 +208,14 @@ export default function App() {
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }
         }}
+        onOpenAdmin={() => {
+          if (!isLoggedIn) {
+            handleOpenAuth('login');
+          } else {
+            setActiveView('admin');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        }}
         onOpenAuth={handleOpenAuth}
         isLoggedIn={isLoggedIn}
         currentUser={currentUser}
@@ -300,7 +309,17 @@ export default function App() {
           />
         )}
 
-        {/* 6. TRANG ĐĂNG NHẬP / ĐĂNG KÝ (AuthView) */}
+        {/* 6. TRANG QUẢN TRỊ NGƯỜI DÙNG & NGƯỜI BÁN */}
+        {activeView === 'admin' && (
+          <AdminView
+            onNavigate={(screen) => {
+              setActiveView(screen);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
+        )}
+
+        {/* 7. TRANG ĐĂNG NHẬP / ĐĂNG KÝ (AuthView) */}
         {activeView === 'auth' && (
           <AuthView
             initialMode={authInitialMode}
