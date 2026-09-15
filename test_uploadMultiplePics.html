@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Test Upload Nhiều Ảnh</title>
+</head>
+<body style="font-family: Arial, sans-serif; padding: 20px;">
+    <h2>Test API Upload Nhiều Ảnh Cloudinary</h2>
+    
+    <input type="file" id="hinhAnh" multiple accept="image/*" style="margin-bottom: 10px;">
+    <br>
+    <button onclick="guiAnh()" style="padding: 10px 20px; cursor: pointer;">Tải Lên Server</button>
+
+    <h4 style="margin-top: 20px;">Kết quả trả về:</h4>
+    <pre id="ketQua" style="background: #f4f4f4; padding: 15px; border-radius: 5px;"></pre>
+
+    <script>
+        async function guiAnh() {
+            const input = document.getElementById('hinhAnh');
+            const ketQua = document.getElementById('ketQua');
+            
+            if (input.files.length === 0) {
+                alert("Chưa chọn ảnh kìa!");
+                return;
+            }
+
+            const formData = new FormData();
+            for (let i = 0; i < input.files.length; i++) {
+                formData.append("files", input.files[i]);
+            }
+
+            ketQua.innerHTML = "Đang đẩy ảnh lên...";
+
+            try {
+                // Gọi API đang chạy ở cổng 8000
+                const response = await fetch("http://127.0.0.1:8000/api/v1/upload/images", {
+                    method: "POST",
+                    body: formData
+                });
+                
+                const data = await response.json();
+                // In kết quả link ảnh ra màn hình
+                ketQua.innerHTML = JSON.stringify(data, null, 2);
+            } catch (error) {
+                ketQua.innerHTML = "Lỗi kết nối Server.";
+            }
+        }
+    </script>
+</body>
+</html>

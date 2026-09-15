@@ -1,6 +1,6 @@
 from fastapi import APIRouter, UploadFile, File
-from app.core.cloudinary import upload_image
-from app.schemas.upload import UploadResponse
+from app.core.cloudinary import upload_image, upload_multiple_images
+from app.schemas.upload import UploadResponse, UploadMultipleResponse
 
 router = APIRouter()
 
@@ -14,3 +14,10 @@ async def upload_single_image(file: UploadFile = File(...)):
     )
 
 
+@router.post("/images", response_model=UploadMultipleResponse, summary="Upload nhiều ảnh cùng lúc")
+async def upload_batch_images(files: list[UploadFile] = File(...)):
+    urls = await upload_multiple_images(files, folder="products")
+    return UploadMultipleResponse(
+        message=f"Upload thành công {len(urls)} ảnh",
+        image_urls=urls
+    )

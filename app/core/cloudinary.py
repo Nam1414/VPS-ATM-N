@@ -11,7 +11,7 @@ cloudinary.config(
     secure=True
 )
 
-async def upload_image(file: UploadFile, folder: str = "pc_store") -> str:
+async def upload_image(file: UploadFile, folder: str = "products") -> str:
     
     allowed_types = ["image/jpeg", "image/png", "image/webp", "image/jpg"]
     if file.content_type not in allowed_types:
@@ -28,4 +28,9 @@ async def upload_image(file: UploadFile, folder: str = "pc_store") -> str:
         raise HTTPException(status_code=500, detail=f"Lỗi khi upload ảnh: {str(e)}")
 
 
-        
+async def upload_multiple_images(files: list[UploadFile], folder: str = "products") -> list[str]:
+    urls = []
+    for file in files:
+        url = await upload_image(file, folder=folder)
+        urls.append(url)
+    return urls      
