@@ -4,6 +4,7 @@ from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.category import CategoryOut
+from app.schemas.user import UserOut
 
 
 class ProductImageOut(BaseModel):
@@ -27,6 +28,8 @@ class ProductOut(BaseModel):
     stock_quantity: Optional[int] = None
     created_at: Optional[datetime] = None
     category: Optional[CategoryOut] = None
+    seller: Optional[UserOut] = None
+    likes: int = 0
     images: List[ProductImageOut] = []
 
 
@@ -39,8 +42,11 @@ class ProductListItem(BaseModel):
     cover: Optional[str] = None
     price: int
     status: Optional[str] = None
+    condition_status: Optional[str] = None
     stock_quantity: Optional[int] = None
     category_id: Optional[int] = None
+    seller: Optional[UserOut] = None
+    likes: int = 0
 
 
 class ProductCreate(BaseModel):

@@ -6,7 +6,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
 
-
 class Product(Base):
     __tablename__ = "products"
 
@@ -42,3 +41,23 @@ class Product(Base):
     wishlist_items: Mapped[List["Wishlist"]] = relationship(
         back_populates="product", cascade="all, delete-orphan"
     )
+
+# --- BỔ SUNG BẢNG CHAT VÀ TRẢ GIÁ (Phải thụt lề ra ngoài, ngang hàng với Product) ---
+class Message(Base):
+    __tablename__ = "messages"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    product_id: Mapped[int] = mapped_column(Integer, ForeignKey("products.id", ondelete="CASCADE"))
+    sender_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    receiver_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    content: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
+
+class Offer(Base):
+    __tablename__ = "offers"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    product_id: Mapped[int] = mapped_column(Integer, ForeignKey("products.id", ondelete="CASCADE"))
+    buyer_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    offer_price: Mapped[int] = mapped_column(BigInteger)
+    message: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(50), default="pending") # pending, accepted, rejected
+    created_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())

@@ -1,8 +1,13 @@
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import select, or_, func
 from sqlalchemy.orm import Session, selectinload
+
+from fastapi import BackgroundTasks
+from pydantic import BaseModel
+from app.models.product import Message, Offer
+from app.models.wishlist import Wishlist
 
 from app.api.deps import get_current_user, get_db
 from app.models import Category, Product, ProductImage, User
@@ -31,7 +36,11 @@ def list_products(
     search: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
-    stmt = select(Product).where(Product.deleted_at.is_(None))
+    # CHỈ HIỂN THỊ CÁC SẢN PHẨM ĐÃ ĐƯỢC ADMIN DUYỆT ("available")
+    stmt = select(Product).where(
+        Product.deleted_at.is_(None),
+        Product.status == "available"
+    )
 
     if category_id is not None:
         stmt = stmt.where(Product.category_id == category_id)
@@ -40,6 +49,21 @@ def list_products(
         stmt = stmt.where(Product.name.ilike(f"%{search}%"))
 
     stmt = stmt.offset(skip).limit(limit)
+    return db.scalars(stmt).all()
+
+
+# ================================================================
+# THÊM API: LẤY DANH SÁCH TIN ĐĂNG CỦA CHÍNH TÀI KHOẢN ĐANG LOGIN
+# ================================================================
+@router.get("/products/me", response_model=List[ProductListItem])
+def get_my_products(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    stmt = select(Product).where(
+        Product.deleted_at.is_(None),
+        Product.seller_id == current_user.id
+    )
     return db.scalars(stmt).all()
 
 
@@ -83,7 +107,7 @@ def create_product(
         cover=payload.cover,
         price=payload.price,
         condition_status=payload.condition_status,
-        status=payload.status,
+        status="pending", # ÉP BUỘC TRẠNG THÁI CHỜ DUYỆT (Ẩn khỏi trang chủ)
         stock_quantity=payload.stock_quantity,
     )
 
@@ -94,3 +118,156 @@ def create_product(
     db.commit()
     db.refresh(product)
     return product
+
+
+# ================================================================
+# API CHO QUẢN TRỊ VIÊN (ADMIN) XỬ LÝ TIN ĐĂNG CHỜ DUYỆT
+# ================================================================
+@router.get("/admin/products/pending", response_model=List[ProductListItem])
+def get_pending_products(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Không có quyền truy cập")
+        
+    stmt = select(Product).where(
+        Product.deleted_at.is_(None),
+        Product.status == "pending"
+    )
+    return db.scalars(stmt).all()
+
+
+@router.patch("/admin/products/{product_id}/approve")
+def approve_product(
+    product_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Không có quyền truy cập")
+        
+    product = db.get(Product, product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="Không tìm thấy sản phẩm")
+        
+    product.status = "available"
+    db.commit()
+    return {"message": "Đã duyệt sản phẩm thành công"}
+
+
+# Schemas nhận dữ liệu
+class ChatMessageCreate(BaseModel):
+    receiver_id: int
+    content: str
+
+class OfferCreate(BaseModel):
+    offer_price: int
+    message: str
+
+# Hàm mô phỏng gửi Email
+def send_email_notification(email: str, subject: str, content: str):
+    print(f"\n[{func.current_timestamp()}] 📧 ĐANG GỬI EMAIL ĐẾN: {email}")
+    print(f"Tiêu đề: {subject}")
+    print(f"Nội dung: {content}")
+    print("====================================================\n")
+
+# ================================================================
+# API CHAT (NHẮN TIN)
+# ================================================================
+@router.post("/{product_id}/chat")
+def send_chat_message(
+    product_id: int,
+    payload: ChatMessageCreate,
+    bg_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    msg = Message(
+        product_id=product_id,
+        sender_id=current_user.id,
+        receiver_id=payload.receiver_id,
+        content=payload.content
+    )
+    db.add(msg)
+    db.commit()
+    db.refresh(msg)
+
+    # Lấy thông tin người nhận để gửi mail
+    receiver = db.get(User, payload.receiver_id)
+    if receiver:
+        bg_tasks.add_task(
+            send_email_notification,
+            email=receiver.email,
+            subject="Bạn có tin nhắn mới trên 2HAND.VN",
+            content=f"Người dùng {current_user.full_name} vừa nhắn cho bạn: '{payload.content}'"
+        )
+    return msg
+
+@router.get("/{product_id}/chat")
+def get_chat_history(
+    product_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    stmt = select(Message).where(
+        Message.product_id == product_id,
+        or_(Message.sender_id == current_user.id, Message.receiver_id == current_user.id)
+    ).order_by(Message.created_at.asc())
+    return db.scalars(stmt).all()
+
+# ================================================================
+# API TRẢ GIÁ (MAKE OFFER)
+# ================================================================
+@router.post("/{product_id}/offers")
+def make_offer(
+    product_id: int,
+    payload: OfferCreate,
+    bg_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    product = db.get(Product, product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="Sản phẩm không tồn tại")
+
+    offer = Offer(
+        product_id=product.id,
+        buyer_id=current_user.id,
+        offer_price=payload.offer_price,
+        message=payload.message
+    )
+    db.add(offer)
+    db.commit()
+
+    seller = db.get(User, product.seller_id)
+    if seller:
+        bg_tasks.add_task(
+            send_email_notification,
+            email=seller.email,
+            subject=f"Đề nghị mua mới cho sản phẩm: {product.name}",
+            content=f"{current_user.full_name} vừa trả giá {payload.offer_price:,}đ. Tin nhắn: {payload.message}"
+        )
+    return offer
+
+# ================================================================
+# API YÊU THÍCH (WISHLIST)
+# ================================================================
+@router.post("/{product_id}/wishlist")
+def toggle_wishlist(
+    product_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    stmt = select(Wishlist).where(Wishlist.user_id == current_user.id, Wishlist.product_id == product_id)
+    item = db.scalars(stmt).first()
+    
+    if item:
+        db.delete(item)
+        db.commit()
+        return {"message": "Đã xóa khỏi yêu thích", "liked": False}
+    else:
+        new_like = Wishlist(user_id=current_user.id, product_id=product_id)
+        db.add(new_like)
+        db.commit()
+        return {"message": "Đã lưu vào yêu thích", "liked": True}

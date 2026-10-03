@@ -38,4 +38,8 @@ class UserOut(BaseModel):
     email: EmailStr
     phone_number: Optional[str] = None
     role: Optional[str] = None
+    avatar: Optional[str] = None
+    rating: float = 5.0
+    review_count: int = 0
+    is_verified: bool = True
     created_at: Optional[datetime] = None
