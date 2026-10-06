@@ -1,4 +1,4 @@
-export type ScreenType = 'home' | 'catalog' | 'detail' | 'sell' | 'profile' | 'auth';
+export type ScreenType = 'home' | 'catalog' | 'detail' | 'sell' | 'profile' | 'auth' | 'admin';
 
 export type CategoryTab = 'all' | 'electronics' | 'sports';
 
@@ -20,6 +20,7 @@ export interface UserProfile {
   joinedDate: string;
   bio?: string;
   location?: string;
+  role?: 'user' | 'admin';
 }
 
 export interface Product {
@@ -36,6 +37,7 @@ export interface Product {
   image: string;
   gallery?: string[];
   location: string;
+  status?: string; // Đồng bộ với Backend (pending, available)
   seller: {
     id: string;
     name: string;
